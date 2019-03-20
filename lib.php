@@ -3,7 +3,7 @@
  * Youtube Proxy 
  * Simple Youtube PHP Proxy Server
  * @author ZXQ
- * @version V4.0
+ * @version V1.2
  * @description 核心操作函数集合
  */
 
@@ -60,8 +60,22 @@ function get_channel_video($cid,$pageToken='',$apikey,$regionCode='VN'){
 
 //获取视频类别内容
 function videoCategories($apikey,$regionCode='HK'){
-   $apilink='https://www.googleapis.com/youtube/v3/videoCategories?part=snippet&regionCode='.$regionCode.'&hl=zh-CN&key='.$apikey;
-   return json_decode(get_data($apilink),true);
+   $apicache = '/tmp/ytb_videoCategories_'.$regionCode;
+   $json = file_get_contents($apicache);
+   if (empty($json)) {
+       $apilink='https://www.googleapis.com/youtube/v3/videoCategories?part=snippet&regionCode='.$regionCode.'&hl=zh-CN&key='.$apikey;
+       $json = get_data($apilink);
+      file_put_contents($apicache,$json);
+      file_put_contents($apicache.".ts","REQUEST_TIME: " . $_SERVER['REQUEST_TIME']);
+   }
+   $ret = json_decode($json,true);
+   $items = $ret['items'];
+   if (strtolower($regionCode) == 'tw') {
+      return array_filter($items, function($v){
+         return array_search($v['id'], ['18','33','41','42']) === FALSE;
+      });
+   }
+   return $items;
 }
 
 
@@ -201,7 +215,7 @@ return $data = QueryList::Query(get_data($channel),$rules)->data;
 
 //采集抓取随机推荐内容
 function random_recommend(){
-   $dat=get_data('https://www.youtube.com/?gl=TW&hl=zh-CN'); 
+   $dat=get_data('https://www.youtube.com/?gl='.constant("GJ_CODE").'&hl=zh-CN'); 
    $rules = array(
     't' => array('#feed .individual-feed .section-list li .item-section li .feed-item-container .feed-item-dismissable .shelf-title-table .shelf-title-row h2 .branded-page-module-title-text','text'),
     'html' => array('#feed .individual-feed .section-list li .item-section li .feed-item-container .feed-item-dismissable .compact-shelf .yt-viewport .yt-uix-shelfslider-list','html'),
@@ -430,7 +444,7 @@ function shareit($id,$title='免翻墙Youtube镜像'){
  <div class='form-group'><div class='d-inline-block h6 pt-3 col-12'>
     分享代码：
  </div>
-    <textarea style='resize:none;height: auto' class='form-control d-inline align-middle col-12 icoys icontext' id='inputs' type='text' rows='5' placeholder='Default input'><iframe height=498 width=510 src=&quot;".ROOT_PART."embed/?v=".$id.";&quot; frameborder=0 &quot;allowfullscreen&quot;></iframe></textarea>
+    <textarea style='resize:none;height: auto' class='form-control d-inline align-middle col-12 icoys icontext' id='inputs' type='text' rows='5' placeholder='Default input'><iframe height=498 width=510 src=&quot;".ROOT_PART."embed/?v=".$id."&quot; frameborder=0 &quot;allowfullscreen&quot;></iframe></textarea>
     
     <button type='submit' class='btn btn-primary align-middle col-12 mt-2' onclick='copytext1()'>复制</button></div>";
     
